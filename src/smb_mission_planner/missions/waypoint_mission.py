@@ -21,6 +21,7 @@ class WaypointMission(smach.State):
         self.waypoint_idx = 0
         self.waypoint_name = ""
         self.next_waypoint = False
+        self.waypoint_timeout = 15.0 # seconds
 
         # actionlib client
         self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
@@ -46,7 +47,11 @@ class WaypointMission(smach.State):
             current_waypoint['x_m'], current_waypoint['y_m'], current_waypoint['yaw_rad'])
         rospy.loginfo("Waypoint set: '" + self.waypoint_name + "'.")
 
-        self.client.wait_for_result()
+        if not self.client.wait_for_result(rospy.Duration(self.waypoint_timeout)):
+            rospy.loginfo("Waypoint '" + self.waypoint_name +
+                              "' skipped. Loading next waypoint...")
+            self.waypoint_idx += 1
+            return 'Next Waypoint'
 
         if self.next_waypoint:
             rospy.loginfo("Waypoint '" + self.waypoint_name +
